@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Typhoon AI</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #080d19;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 700px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #101827;
+    }
+
+    header {
+      padding: 20px;
+      background: #1b2940;
+      border-bottom: 1px solid #29364d;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #67e8f9;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: #a7b5ca;
+      font-size: 13px;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .welcome {
+      text-align: center;
+      color: #cbd5e1;
+      margin: auto 0;
+      padding: 35px 10px;
+      line-height: 1.9;
+    }
+
+    .welcome .logo {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    .message {
+      padding: 12px 15px;
+      border-radius: 16px;
+      max-width: 90%;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .user {
+      align-self: flex-start;
+      background: #164e63;
+    }
+
+    .assistant {
+      align-self: flex-end;
+      background: #202d43;
+      border: 1px solid #34435b;
+    }
+
+    .label {
+      font-size: 11px;
+      color: #67e8f9;
+      margin-bottom: 5px;
+    }
+
+    form {
+      display: flex;
+      gap: 9px;
+      padding: 14px;
+      background: #1b2940;
+      border-top: 1px solid #29364d;
+    }
+
+    textarea {
+      flex: 1;
+      resize: none;
+      min-width: 0;
+      min-height: 48px;
+      max-height: 120px;
+      padding: 13px;
+      border-radius: 13px;
+      border: 1px solid #40516b;
+      background: #080d19;
+      color: white;
+      font: inherit;
+      outline: none;
+    }
+
+    button {
+      border: 0;
+      border-radius: 13px;
+      padding: 0 18px;
+      background: #06b6d4;
+      color: #06202a;
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    button:disabled {
+      opacity: .5;
+    }
+
+    .status {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+      padding: 0 10px 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>🌪️ Typhoon AI</h1>
+      <p>مساعدك الذكي المحلي · يعمل عبر Ollama</p>
+    </header>
+
+    <section id="messages">
+      <div class="welcome" id="welcome">
+        <div class="logo">🌪️</div>
+        <h2>مرحبًا بك في Typhoon AI</h2>
+        <p>أنا مساعدك الذكي. اكتب رسالتك لنبدأ المحادثة.</p>
+      </div>
+    </section>
+
+    <div class="status" id="status">جاهز لاستقبال رسالتك</div>
+
+    <form id="chatForm">
+      <textarea id="input" placeholder="اكتب رسالتك هنا..." rows="1" required></textarea>
+      <button id="send" type="submit">إرسال</button>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("input");
+    const messages = document.getElementById("messages");
+    const statusText = document.getElementById("status");
+    const sendButton = document.getElementById("send");
+    let history = [];
+
+    function addMessage(role, content) {
+      const welcome = document.getElementById("welcome");
+      if (welcome) welcome.remove();
+
+      const box = document.createElement("div");
+      box.className = "message " + role;
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = role === "user" ? "أنت" : "Typhoon AI";
+
+      const text = document.createElement("div");
+      text.textContent = content;
+
+      box.append(label, text);
+      messages.appendChild(box);
+      messages.scrollTop = messages.scrollHeight;
+      return text;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage("user", message);
+      input.value = "";
+      input.style.height = "48px";
+      sendButton.disabled = true;
+      statusText.textContent = "Typhoon AI يفكر...";
+
+      const answerBox = addMessage("assistant", "جارٍ الاتصال بالنموذج...");
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, history })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "حدث خطأ.");
+
+        answerBox.textContent = data.answer;
+        history.push(
+          { role: "user", content: message },
+          { role: "assistant", content: data.answer }
+        );
+        history = history.slice(-20);
+        statusText.textContent = "متصل";
+      } catch (error) {
+        answerBox.textContent = "تعذر الحصول على إجابة.\n" + error.message;
+        statusText.textContent = "تحقق من تشغيل Ollama والخادم.";
+      } finally {
+        sendButton.disabled = false;
+        input.focus();
+        messages.scrollTop = messages.scrollHeight;
+      }
+    });
+
+    input.addEventListener("input", () => {
+      input.style.height = "48px";
+      input.style.height = Math.min(input.scrollHeight, 120) + "px";
+    });
+  </script>
+</body>
+</html>
