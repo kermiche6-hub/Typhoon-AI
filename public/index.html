@@ -166,10 +166,14 @@
     const messages = document.getElementById("messages");
     const statusText = document.getElementById("status");
     const sendButton = document.getElementById("send");
-    let history = [];
+    let history = JSON.parse(localStorage.getItem("typhoon_history") || "[]");
+
+    function saveHistory() {
+      localStorage.setItem("typhoon_history", JSON.stringify(history));
+    }
 
     function addMessage(role, content) {
-      const welcome = document.getElementById("welcome");
+     const welcome = document.getElementById("welcome");
       if (welcome) welcome.remove();
 
       const box = document.createElement("div");
@@ -187,6 +191,12 @@
       messages.scrollTop = messages.scrollHeight;
       return text;
     }
+
+    history.forEach(item => {
+      if (item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string") {
+        addMessage(item.role, item.content);
+      }
+    });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -215,7 +225,8 @@
           { role: "user", content: message },
           { role: "assistant", content: data.answer }
         );
-        history = history.slice(-20);
+        history = history.slice(-100);
+        saveHistory();
         statusText.textContent = "متصل";
       } catch (error) {
         answerBox.textContent = "تعذر الحصول على إجابة.\n" + error.message;
