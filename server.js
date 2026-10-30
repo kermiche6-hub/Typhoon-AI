@@ -9,6 +9,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.post("/api/chat", async (req, res) => {
+  console.log("وصل طلب من التطبيق:", req.body.message);
   try {
     const { message, history = [] } = req.body;
 
