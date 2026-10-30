@@ -4,6 +4,6 @@
   "webDir": "public",
   "server": {
     "cleartext": true,
-    "allowNavigation": ["10.184.68.91"]
+    "allowNavigation": ["10.184.68.91", "127.0.0.1"]
   }
 }
